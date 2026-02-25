@@ -28,7 +28,7 @@ export class Calculator {
 
   #isValidBracketOperation(value) {
     if (value === "(") {
-      return true; 
+      return true;
     }
 
     if (value === ")") {
@@ -59,7 +59,7 @@ export class Calculator {
     expr = expr.replace(/\)\(/g, ")*(");
     expr = expr.replace(/(\d)\(/g, "$1*(");
     expr = expr.replace(/\)(\d)/g, ")*$1");
-    
+
     return expr;
   }
 
@@ -115,6 +115,9 @@ export class Calculator {
 
   evaluate() {
     try {
+      if (!this.expression.trim()) {
+        return; 
+      }
       if (!this.#areBracketsBalanced()) {
         return;
       }
@@ -139,9 +142,9 @@ export class Calculator {
       }
 
       let finalExp = this.expression.replaceAll("x", "*").replaceAll("÷", "/");
-      
+
       finalExp = this.#addImplicitMultiplication(finalExp);
-      
+
       let result = eval(finalExp);
 
       if (!isFinite(result)) {
