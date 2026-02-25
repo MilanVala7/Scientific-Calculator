@@ -20,6 +20,49 @@ export class Calculator {
     return ["+", "-", "x", "÷", "*", "/"].includes(ch);
   }
 
+  #getBracketCount() {
+    let openCount = (this.expression.match(/\(/g) || []).length;
+    let closeCount = (this.expression.match(/\)/g) || []).length;
+    return { open: openCount, close: closeCount };
+  }
+
+  #isValidBracketOperation(value) {
+    if (value === "(") {
+      return true; 
+    }
+
+    if (value === ")") {
+      const { open, close } = this.#getBracketCount();
+      if (open === 0) {
+        this.outputEl.innerText = "Error: No opening bracket";
+        return false;
+      }
+      if (close >= open) {
+        return;
+      }
+      return true;
+    }
+
+    return true;
+  }
+
+  #areBracketsBalanced() {
+    const { open, close } = this.#getBracketCount();
+    if (open !== close) {
+      this.outputEl.innerText = "Error: Unmatched brackets";
+      return false;
+    }
+    return true;
+  }
+
+  #addImplicitMultiplication(expr) {
+    expr = expr.replace(/\)\(/g, ")*(");
+    expr = expr.replace(/(\d)\(/g, "$1*(");
+    expr = expr.replace(/\)(\d)/g, ")*$1");
+    
+    return expr;
+  }
+
   append(value) {
     if (this.justEvaluated && !this.isOperator(value)) {
       this.expression = "";
@@ -27,9 +70,20 @@ export class Calculator {
       this.justEvaluated = false;
     }
 
+    if (value === "(" || value === ")") {
+      if (!this.#isValidBracketOperation(value)) {
+        return;
+      }
+    }
+
     const last = this.expression.slice(-1);
 
-    if (this.isOperator(value) && this.isOperator(last)) return;
+    if (this.isOperator(value) && this.isOperator(last)) {
+      this.expression = this.expression.slice(0, -1) + value;
+      this.outputEl.innerText = this.expression;
+      this.justEvaluated = false;
+      return;
+    }
 
     if (!this.expression && this.isOperator(value) && value !== "-") return;
 
@@ -61,6 +115,10 @@ export class Calculator {
 
   evaluate() {
     try {
+      if (!this.#areBracketsBalanced()) {
+        return;
+      }
+
       if (this.justEvaluated && this.lastOperator && this.lastOperand !== "") {
         if (this.lastOperator === "/" && Number(this.lastOperand) === 0) {
           this.outputEl.innerText = "Cannot divide by zero.";
@@ -81,6 +139,9 @@ export class Calculator {
       }
 
       let finalExp = this.expression.replaceAll("x", "*").replaceAll("÷", "/");
+      
+      finalExp = this.#addImplicitMultiplication(finalExp);
+      
       let result = eval(finalExp);
 
       if (!isFinite(result)) {
@@ -298,6 +359,58 @@ export class Calculator {
   clearEntry() {
     this.expression = "";
     this.outputEl.innerText = "";
+  }
+
+  dms() {
+    if (!this.expression) return;
+
+    let deg = eval(this.expression);
+
+    let d = Math.floor(deg);
+    let minFloat = (deg - d) * 60;
+    let m = Math.floor(minFloat);
+    let s = Math.floor((minFloat - m) * 60);
+
+    let result = `${d}° ${m}' ${s}"`;
+
+    this.inputEl.innerText = deg + "°";
+    this.outputEl.innerText = result;
+  }
+
+  deg() {
+    try {
+      let parts = this.expression.split(" ");
+
+      let d = parseFloat(parts[0]) || 0;
+      let m = parseFloat(parts[1]) || 0;
+      let s = parseFloat(parts[2]) || 0;
+
+      let result = d + (m / 60) + (s / 3600);
+
+      this.outputEl.innerText = result;
+      this.expression = result.toString();
+    } catch {
+      this.outputEl.innerText = "Error";
+    }
+  }
+
+  mod() {
+    if (!this.expression) return;
+    this.expression += "%";
+    this.outputEl.innerText = this.expression;
+  }
+
+  modX() {
+    try {
+      let num = eval(this.expression);
+      let result = Math.abs(num);
+
+      this.inputEl.innerText = "|" + num + "|";
+      this.outputEl.innerText = result;
+      this.expression = result.toString();
+    } catch {
+      this.outputEl.innerText = "Error";
+    }
   }
 }
 
